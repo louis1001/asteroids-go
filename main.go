@@ -27,8 +27,8 @@ type Game struct {
 
 func (g *Game) Shoot() {
 	newBullet := NewBullet(
-		*g.player.GetPosition(),
-		*g.player.GetDirection(),
+		g.player.position,
+		g.player.direction,
 	)
 
 	g.bullets = append(g.bullets, newBullet)
@@ -46,11 +46,43 @@ func (g *Game) CleanBullets() {
 	g.bullets = newBulletList
 }
 
+func (g *Game) CleanAsteroids() {
+	newAsteroidList := []*Asteroid{}
+
+	for _, b := range g.asteroids {
+		if b.alive {
+			newAsteroidList = append(newAsteroidList, b)
+		}
+	}
+
+	g.asteroids = newAsteroidList
+}
+
+func (g *Game) ManageCollisions() {
+	for _, bullet := range g.bullets {
+		if !bullet.alive { continue }
+		for _, asteroid := range g.asteroids {
+			if !asteroid.alive { continue }
+
+			asteroidCircle := Circle {&asteroid.position, asteroidSize*0.7, &asteroid.velocity}
+			if CollidePointCircle(bullet.position, asteroidCircle) {
+				asteroid.Kill()
+				bullet.Kill()
+			}
+		}
+	}
+}
+
 func (g *Game) Update() error {
 	g.player.Update()
 
+	deadAsteroid := false
+
 	for _, asteroid := range g.asteroids {
 		asteroid.Update()
+		if !(deadAsteroid || asteroid.alive) {
+			deadAsteroid = true
+		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
@@ -66,6 +98,8 @@ func (g *Game) Update() error {
 		g.alreadyShooting = false
 	}
 
+	g.ManageCollisions()
+
 	deadBullet := false
 
 	for _, bullet := range g.bullets {
@@ -77,6 +111,10 @@ func (g *Game) Update() error {
 
 	if deadBullet {
 		g.CleanBullets()
+	}
+
+	if deadAsteroid {
+		g.CleanAsteroids()
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {

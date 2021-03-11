@@ -25,6 +25,10 @@ func (v *Vec2) Rotate(theta float64) {
 	v.y = math.Sin(theta)*v1.x + math.Cos(theta)*v1.y
 }
 
+func (v *Vec2) Mag() float64 {
+	return math.Hypot(v.x, v.y)
+}
+
 func (v *Vec2) Heading() float64 {
 	a := math.Atan(v.y/v.x)
 	if v.x < 0 {

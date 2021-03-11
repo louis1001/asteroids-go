@@ -27,6 +27,10 @@ type Bullet struct {
 	alive bool
 }
 
+func (b *Bullet) Kill() {
+	b.alive = false
+}
+
 func NewBullet(pos, dir Vec2) *Bullet {
 	return &Bullet {pos, dir, 0, true}
 }

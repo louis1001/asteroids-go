@@ -37,6 +37,12 @@ type Asteroid struct {
 
 	rotation float64
 	rotationSpeed float64
+
+	alive bool
+}
+
+func (a *Asteroid) Kill() {
+	a.alive = false
 }
 
 func (a *Asteroid) Draw(screen *ebiten.Image) {
@@ -99,5 +105,5 @@ func NewAsteroid() *Asteroid {
 
 	rot := randFloat(0, math.Pi)
 
-	return &Asteroid{img, randPos, randVel, rot, randFloat(-asteroidMaxRotSpeed, asteroidMaxRotSpeed)}
+	return &Asteroid{img, randPos, randVel, rot, randFloat(-asteroidMaxRotSpeed, asteroidMaxRotSpeed), true}
 }
