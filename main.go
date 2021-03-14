@@ -26,8 +26,10 @@ type Game struct {
 }
 
 func (g *Game) Shoot() {
+	newPosition := g.player.position
+	newPosition.Add(MulVecScal(g.player.direction, ph/2))
 	newBullet := NewBullet(
-		g.player.position,
+		newPosition,
 		g.player.direction,
 	)
 
@@ -59,17 +61,27 @@ func (g *Game) CleanAsteroids() {
 }
 
 func (g *Game) ManageCollisions() {
-	for _, bullet := range g.bullets {
+	debris := [] *Asteroid{}
+	BulletLoop: for _, bullet := range g.bullets {
 		if !bullet.alive { continue }
 		for _, asteroid := range g.asteroids {
 			if !asteroid.alive { continue }
 
-			asteroidCircle := Circle {&asteroid.position, asteroidSize*0.7, &asteroid.velocity}
+			asteroidCircle := Circle {&asteroid.position, asteroid.size*0.7, &asteroid.velocity}
 			if CollidePointCircle(bullet.position, asteroidCircle) {
-				asteroid.Kill()
+				result := asteroid.Destroy(bullet.direction)
+
+				for _, ast := range result {
+					debris = append(debris, ast)
+				}
 				bullet.Kill()
+				continue BulletLoop
 			}
 		}
+	}
+
+	for _, ast := range debris {
+		g.asteroids = append(g.asteroids, ast)
 	}
 }
 
@@ -84,21 +96,6 @@ func (g *Game) Update() error {
 			deadAsteroid = true
 		}
 	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.player.Accelerate(1)
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		if !g.alreadyShooting {
-			g.Shoot()
-			g.alreadyShooting = true
-		}
-	} else if g.alreadyShooting {
-		g.alreadyShooting = false
-	}
-
-	g.ManageCollisions()
 
 	deadBullet := false
 
@@ -115,6 +112,21 @@ func (g *Game) Update() error {
 
 	if deadAsteroid {
 		g.CleanAsteroids()
+	}
+
+	g.ManageCollisions()
+
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		g.player.Accelerate(1)
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		if !g.alreadyShooting {
+			g.Shoot()
+			g.alreadyShooting = true
+		}
+	} else if g.alreadyShooting {
+		g.alreadyShooting = false
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
@@ -149,14 +161,14 @@ func main() {
 	ebiten.SetWindowTitle("Asteroids")
 
 	asteroids := []*Asteroid{
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
-		NewAsteroid(),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
+		NewAsteroid(rock),
 	}
 
 	if err := ebiten.RunGame(&Game{NewPlayer(), []*Bullet{}, asteroids, false}); err != nil {

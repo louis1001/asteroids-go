@@ -13,6 +13,14 @@ const (
 	rubbleSize = 50
 )
 
+type AsteroidKind int
+
+const (
+	rubble AsteroidKind = iota
+	rock = iota
+	meteor = iota
+)
+
 var asteroidImages = []*ebiten.Image{}
 var rubbleImages = []*ebiten.Image{}
 
@@ -32,6 +40,9 @@ const (
 type Asteroid struct {
 	image *ebiten.Image
 
+	kind AsteroidKind
+	size float64
+
 	position Vec2
 	velocity Vec2
 
@@ -47,7 +58,7 @@ func (a *Asteroid) Kill() {
 
 func (a *Asteroid) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(-asteroidSize/2.0, -asteroidSize/2.0)
+	op.GeoM.Translate(-a.size/2.0, -a.size/2.0)
 	op.GeoM.Rotate(a.rotation)
 	op.GeoM.Translate(a.position.x, a.position.y)
 
@@ -57,10 +68,42 @@ func (a *Asteroid) Draw(screen *ebiten.Image) {
 func (a *Asteroid) Update() {
 	a.position.Add(a.velocity)
 
-	a.position.Wrap(borderBuffer, borderBuffer, screenWidth-borderBuffer, screenHeight-borderBuffer)
+	a.position.Wrap(
+		borderBuffer,
+		borderBuffer,
+		screenWidth-borderBuffer,
+		screenHeight-borderBuffer,
+	)
+
 	a.rotation += a.rotationSpeed
 }
 
+func (a *Asteroid) Destroy(dir Vec2) (debris []*Asteroid) {
+	a.Kill()
+	debris = []*Asteroid{}
+	if a.kind == rubble {
+		return debris
+	}
+
+	ammount := int(a.kind)+1
+	for i := 0; i < ammount; i++ {
+		newAsteroid := NewAsteroid(a.kind-1)
+
+		randRotation := randFloat(-math.Pi/4, math.Pi/4)
+		newDirection := dir
+		newDirection.Rotate(randRotation)
+		newAsteroid.velocity = MulVecScal(newDirection, a.velocity.Mag()*4)
+
+		newPosition := a.position.Clone()
+		newPosition.Add(MulVecScal(newDirection, 20))
+
+		newAsteroid.position = newPosition
+
+		debris = append(debris, newAsteroid)
+	}
+
+	return debris
+}
 
 func randFloat(min, max float64) float64 {
 	return rand.Float64() * (max-min) + min
@@ -91,7 +134,7 @@ func GenerateAsteroidImages() {
 	}
 }
 
-func NewAsteroid() *Asteroid {
+func NewAsteroid(kind AsteroidKind) *Asteroid {
 	randPos := Vector(
 		float64(randInt(0, screenWidth)),
 		float64(randInt(0, screenHeight)),
@@ -101,9 +144,26 @@ func NewAsteroid() *Asteroid {
 		randFloat(-asteroidMaxSpeed, asteroidMaxSpeed),
 	)
 
-	img := pickRandomImage(asteroidImages)
+	var img *ebiten.Image
+	var size float64
+	if kind == rubble {
+		img = pickRandomImage(rubbleImages)
+		size = rubbleSize
+	} else if kind == rock {
+		img = pickRandomImage(asteroidImages)
+		size = asteroidSize
+	}
 
 	rot := randFloat(0, math.Pi)
 
-	return &Asteroid{img, randPos, randVel, rot, randFloat(-asteroidMaxRotSpeed, asteroidMaxRotSpeed), true}
+	return &Asteroid{
+		img,
+		kind,
+		size,
+		randPos,
+		randVel,
+		rot,
+		randFloat(-asteroidMaxRotSpeed, asteroidMaxRotSpeed),
+		true,
+	}
 }
